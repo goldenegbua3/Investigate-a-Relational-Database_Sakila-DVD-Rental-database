@@ -1,0 +1,65 @@
+/*Query 1 - the query used for the first insight*/
+SELECT f.title film_title,
+       c.name category,
+       COUNT(r.rental_id) AS rental_count
+  FROM film_category fc
+       JOIN category c
+        ON c.category_id = fc.category_id
+		JOIN film f
+        ON f.film_id = fc.film_id
+       JOIN inventory i
+        ON f.film_id = i.film_id
+       JOIN rental r
+        ON i.inventory_id = r.inventory_id
+ GROUP BY 1, 2
+ HAVING c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music')
+ ORDER BY 2, 1;
+
+
+/*Query 2 - the query used for the second insight*/
+SELECT t1.*, NTILE(4) OVER (ORDER BY rental_duration) AS standard_quartile
+FROM
+(SELECT f.title film_name, c.name category, SUM(f.rental_duration) AS rental_duration
+FROM film_category fc
+     JOIN category c
+     ON c.category_id = fc.category_id
+     JOIN film f
+     ON f.film_id = fc.film_id
+GROUP BY 1,2
+HAVING c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music')) t1
+ORDER BY rental_duration
+
+
+/*Query 3 - the query used for the third insight*/
+WITH t1 AS (SELECT c.name,
+               f.rental_duration,
+               NTILE(4) OVER(ORDER BY f.rental_duration) AS standard_quartile
+          FROM category c
+               JOIN film_category fc
+                ON c.category_id = fc.category_id
+               JOIN film f
+                ON f.film_id = fc.film_id
+	   WHERE c.name IN ('Animation', 'Children', 'Classics', 'Comedy', 'Family', 'Music'))
+	   
+SELECT t1.name category,
+       t1.standard_quartile,
+       COUNT(*)
+  FROM t1
+ GROUP BY 1, 2
+ ORDER BY 1, 2;
+
+
+/*Query 4 - the query used for the fourth insight*/
+SELECT*
+FROM
+(SELECT DATE_PART('month', r.rental_date) rental_month, 
+       DATE_PART('year', r.rental_date) rental_year,
+       ('Store ' || sto.store_id) AS store,
+       COUNT(*)
+  FROM store sto
+       JOIN staff sta
+        ON sto.store_id = sta.store_id
+       JOIN rental r
+        ON sta.staff_id = r.staff_id
+ GROUP BY 1, 2, 3) t1
+ ORDER BY 2, 4 DESC;
